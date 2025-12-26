@@ -1,0 +1,927 @@
+{
+  "updatedAt": "2025-12-18T16:11:42.464Z",
+  "createdAt": "2025-12-18T16:09:17.389Z",
+  "id": "vzu0SKHjR4GZbOBX",
+  "name": "dev - CLOUD - KNOWN USER INSTAGRAM",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "COMMENTS",
+        "contactId": "={{ $('When Executed by Another Workflow').first().json.contact_id }}",
+        "comment": "={{ $json.summary }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        0
+      ],
+      "id": "6170bd31-abe2-4de4-92ea-54908394ee69",
+      "name": "Add Routine Summary As A Comment2",
+      "executeOnce": true,
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from workflow input\nconst productsOffered = $('When Executed by Another Workflow').first().json.products_offered;\nconst contactId = $('When Executed by Another Workflow').first().json.contact_id;\n\n// Helper to format numbers\nconst fmt = (n) => {\n  const v = Math.max(0, Math.round(Number(n) || 0));\n  return v.toLocaleString('en-US');\n};\n\n// Arabic step labels\nconst arabicStep = (title = '') => {\n  const t = String(title).toLowerCase();\n  if (t.includes('sunscreen')) return 'واقي شمسي';\n  if (t.includes('moist')) return 'مرطب';\n  if (t.includes('cleanser')) return 'منظف';\n  if (t.includes('treatment')) return 'علاج';\n  if (t.includes('serum')) return 'سيروم';\n  return 'منتج';\n};\n\n// Extract checkout page\nconst cp = productsOffered?.checkout_page ?? {};\nconst morning = Array.isArray(cp.morning_routine) ? cp.morning_routine : [];\nconst evening = Array.isArray(cp.evening_routine) ? cp.evening_routine : [];\n\n// Build summary lines\nlet computedTotal = 0;\nconst lines = [];\n\nif (morning.length) {\n  lines.push('🌞 الصباح:');\n  morning.forEach((it, i) => {\n    const step = arabicStep(it?.title);\n    const price = Number(\n      it?.price_iqd ?? it?.priceIQD ?? it?.price_iqd_total ?? it?.price ?? 0\n    ) || 0;\n    computedTotal += price;\n    lines.push(`  ${i + 1}) ${step}${price ? ` — ${fmt(price)} د.ع` : ''}`);\n  });\n}\n\nif (evening.length) {\n  if (lines.length) lines.push('');\n  lines.push('🌙 المساء:');\n  evening.forEach((it, i) => {\n    const step = arabicStep(it?.title);\n    const price = Number(\n      it?.price_iqd ?? it?.priceIQD ?? it?.price_iqd_total ?? it?.price ?? 0\n    ) || 0;\n    computedTotal += price;\n    lines.push(`  ${i + 1}) ${step}${price ? ` — ${fmt(price)} د.ع` : ''}`);\n  });\n}\n\n// Calculate totals with 7% discount\nconst totalSheet = Number(cp.total_price_iqd || 0) || 0;\nconst totalBefore = totalSheet || computedTotal;\nconst discount = Math.round(totalBefore * 0.07);\nconst totalAfter = Math.max(0, totalBefore - discount);\n\n// Build summary\nconst summaryParts = [\n  '🧾 *ملخص الروتين المقترح*',\n  '',\n  ...lines,\n  '',\n  `💰 الإجمالي قبل الخصم: *${fmt(totalBefore)} د.ع*`,\n  `🔖 خصم 7%: *${fmt(discount)} د.ع*`,\n  `✅ الإجمالي بعد الخصم: *${fmt(totalAfter)} د.ع*`,\n  '',\n  '📌 ملاحظة: الأسعار بالدينار العراقي وقد تتغير حسب التوفر.',\n];\n\nconst summary = summaryParts.join('\\n');\n\nreturn [{\n  json: {\n    summary,\n    contactId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        0
+      ],
+      "id": "1636a99d-2fc0-4c22-bc13-8fc7f45047d5",
+      "name": "Build Routine Summary2"
+    },
+    {
+      "parameters": {
+        "resource": "MESSAGES",
+        "operation": "SEND_MESSAGE",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "channelId": 377656,
+        "text": "={{ $('When Executed by Another Workflow').item.json.Diagnosis_ar }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        368,
+        0
+      ],
+      "id": "2f49e6f7-c097-4a6a-a17f-994cd1b56b54",
+      "name": "Send short Diagnosis Message2",
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get products data from workflow input instead of Supabase\nconst productsOffered = $('When Executed by Another Workflow').item.json.products_offered;\n\nif (!productsOffered || !productsOffered.checkout_page) {\n  return [{\n    json: {\n      link: 'No routine items found.',\n      error: 'products_offered.checkout_page missing'\n    }\n  }];\n}\n\nfunction splitEnAr(productName) {\n  if (typeof productName !== 'string' || !productName.trim()) {\n    return { en: '', ar: '' };\n  }\n  const parts = productName.split('|');\n  if (parts.length >= 2) {\n    return { en: parts[0].trim(), ar: parts.slice(1).join('|').trim() };\n  }\n  return { en: productName.trim(), ar: '' };\n}\n\nfunction shortUrl(raw) {\n  try {\n    return raw; // Return full URL for AI\n  } catch {\n    return String(raw || '');\n  }\n}\n\nfunction makeBlock(item) {\n  const { en, ar } = splitEnAr(item?.product_name || '');\n  const nameLine = (en && ar) ? `${en} | ${ar}` : (en || ar || '').trim();\n  const urlLine = shortUrl(item?.link || '');\n  const step = item?.title || item?.step || 'Product';\n  \n  return {\n    step: step,\n    name: nameLine,\n    url: urlLine\n  };\n}\n\nfunction formatRoutine(items) {\n  if (!items.length) return '';\n  return items.map(item => \n    `• ${item.step}: ${item.name}\\n  ${item.url}`\n  ).join('\\n\\n');\n}\n\n// Extract morning and evening routines\nconst cp = productsOffered.checkout_page;\nconst am = Array.isArray(cp.morning_routine) ? cp.morning_routine : [];\nconst pm = Array.isArray(cp.evening_routine) ? cp.evening_routine : [];\n\n// Sort by step\nconst byStep = (a, b) => {\n  const sa = (typeof a?.step === 'number') ? a.step : Number.MAX_SAFE_INTEGER;\n  const sb = (typeof b?.step === 'number') ? b.step : Number.MAX_SAFE_INTEGER;\n  return sa - sb;\n};\n\nam.sort(byStep);\npm.sort(byStep);\n\n// Process routines\nlet morningItems = am.filter(item => item?.link).map(makeBlock);\nlet eveningItems = pm.filter(item => item?.link).map(makeBlock);\n\nif (!morningItems.length && !eveningItems.length) {\n  return [{\n    json: {\n      link: 'No routine items found.',\n      error: 'No products with links in morning or evening routine'\n    }\n  }];\n}\n\n// Format sections\nconst morningSection = morningItems.length \n  ? `صباحًا (Morning Routine):\\n${formatRoutine(morningItems)}`\n  : '';\n\nconst eveningSection = eveningItems.length\n  ? `مساءً (Evening Routine):\\n${formatRoutine(eveningItems)}`\n  : '';\n\nconst fullMessage = [morningSection, eveningSection]\n  .filter(Boolean)\n  .join('\\n\\n---\\n\\n');\n\nreturn [{\n  json: {\n    link: fullMessage,\n    total_items: morningItems.length + eveningItems.length,\n    morning_count: morningItems.length,\n    evening_count: eveningItems.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        0
+      ],
+      "id": "a7f1659e-131a-404b-b6b7-1d6b02e19f51",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "resource": "MESSAGES",
+        "operation": "SEND_MESSAGE",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "channelId": 377656,
+        "text": "={{ $('When Executed by Another Workflow').item.json.greeting_message }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d1aee4b9-43a1-43b7-b47d-2e8b9cf6d82b",
+      "name": "Send greeting Message",
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2.5,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "e17789c4-fcf7-4294-853c-c799305015cb",
+      "name": "Wait 2.5min2",
+      "webhookId": "a0e589d4-2a54-44ea-91ea-ef09945ffd94"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2256,
+        0
+      ],
+      "id": "886c0d27-e145-4b8a-8660-f801530de779",
+      "name": "Wait 5 sec2",
+      "webhookId": "d5768e31-7d22-49f8-8ae8-331c6a669146"
+    },
+    {
+      "parameters": {
+        "resource": "MESSAGES",
+        "operation": "SEND_MESSAGE",
+        "contactId": "={{ $('When Executed by Another Workflow').first().json.contact_id }}",
+        "channelId": 377656,
+        "text": "=بتحبي اشرحلك أكتر عن الروتين او عندك اي استفسار ؟ ❤️"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        0
+      ],
+      "id": "6e7cdacf-dd72-4228-b47a-ddcefcd0001e",
+      "name": "Send followup2",
+      "executeOnce": true,
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        544,
+        0
+      ],
+      "id": "4f01ade7-c444-4003-9e63-da8ec5459038",
+      "name": "Wait 15 seconds2",
+      "webhookId": "485e1f57-27c1-42f3-9b04-801b089a91fa"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.link }}\ntotal item:{{ $json.total_items }}"
+            },
+            {
+              "content": "=اكتب شرحًا مختصرًا وواضحًا باللهجة السورية الفصحى، بدون إيموجي، بأسلوب مهني ومهذّب. الهدف: توضيح وظيفة كل منتج ضمن روتين العناية (صباحًا ومساءً).\n\nالمعطيات:\n- كل منتج يحتوي الحقول التالية: step, product_name أو title, link.\n- step يمكن أن يكون: Cleanser | Serum | Treatment | Moisturiser | Sunscreen.\n\nالقواعد الصارمة:\n1. استخدم قيمة step كما هي تمامًا، ولا تغيّرها أبدًا.\n2. إذا تكرر نفس المنتج (نفس الرابط أو نفس الاسم) ضمن الروتين، لا تكرّر الوصف — اذكر فقط \"نفس المنتج السابق\" بعد اسمه.\n3. اجعل الوصف جملة واحدة (10–16 كلمة) تصف وظيفة المنتج باختصار.\n4. استخدم الكلمات المناسبة حسب نوع الخطوة:\n   - Cleanser: ينظّف، يزيل الدهون، يحضّر البشرة.\n   - Serum/Treatment: يوازن، يهدّي، يوحّد اللون، يدعم العلاج.\n   - Moisturiser: يرطّب، يدعم حاجز البشرة، يقلّل الجفاف.\n   - Sunscreen: يحمي من الشمس، SPF 50+، حماية يومية.\n5. لا وعود علاجية ولا نسب فعالية ولا توقّعات زمنية.\n6. الناتج نص عادي فقط، بدون JSON أو ترقيم برمجي.\n\nالتنسيق المطلوب:\nصباحًا:\n• <step>: <اسم المنتج> — <شرح مختصر>. الرابط: <URL>\n\nمساءً:\n• <step>: <اسم المنتج> — <شرح مختصر>. الرابط: <URL>\n\nملاحظات:\n- إذا المنتج نفسه مذكور في الصباح والمساء، اكتبه فقط مرة واحدة مع ملاحظة (يُستخدم صباحًا ومساءً).\n- رتّب العناصر بنفس تسلسل الخطوات (Cleanser → Serum/Treatment → Moisturiser → Sunscreen).\n- اجعل الإخراج أنيقًا ومقروءًا.\n",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        928,
+        0
+      ],
+      "id": "47b04b63-da71-46d7-90a5-e1401564e915",
+      "name": "Message a model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "ChyDQK9xMc7JL7MG",
+          "name": "Wondura"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the full AI-generated message\nconst fullMessage = $json.message.content;\n\nif (!fullMessage) {\n  return [{\n    json: {\n      message: { content: 'Error: No message generated' }\n    }\n  }];\n}\n\n// Split by the morning/evening markers\nconst parts = fullMessage.split('مساءً:');\n\nif (parts.length < 2) {\n  // If no split found, send as single message\n  return [{\n    json: {\n      message: { content: fullMessage }\n    }\n  }];\n}\n\n// Extract morning (includes \"صباحًا:\")\nconst morningSection = parts[0].trim();\n\n// Extract evening (add back the \"مساءً:\" label)\nconst eveningSection = 'مساءً:' + parts[1].trim();\n\n// Return 2 items - n8n will automatically send both\nreturn [\n  {\n    json: {\n      message: { \n        content: morningSection \n      },\n      section: 'morning'\n    }\n  },\n  {\n    json: {\n      message: { \n        content: eveningSection \n      },\n      section: 'evening'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "9fbff917-8aa6-40e2-869d-2aa35a38d514",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "ad25b72f-0741-4820-b9f5-5e2ff75c11ce",
+      "name": "Wait 5 sec3",
+      "webhookId": "6a2509fd-10ec-49f9-87c0-d35f17f5d316"
+    },
+    {
+      "parameters": {
+        "resource": "MESSAGES",
+        "operation": "SEND_MESSAGE",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "channelId": 377656,
+        "text": "={{ $json.message.content }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        0
+      ],
+      "id": "e0c6e4bb-e0fa-428e-af7c-127e2f54a7cd",
+      "name": "Send morning routine",
+      "executeOnce": true,
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "MESSAGES",
+        "operation": "SEND_MESSAGE",
+        "contactId": "={{ $('When Executed by Another Workflow').first().json.contact_id }}",
+        "channelId": 377656,
+        "text": "={{ $('Code in JavaScript4').all().find(item => item.json.section === 'evening').json.message.content }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "f6815acb-c106-4121-9945-702e0ef66ec1",
+      "name": "Send evening routine",
+      "executeOnce": true,
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "contact_id"
+            },
+            {
+              "name": "Diagnosis_ar"
+            },
+            {
+              "name": "products_offered",
+              "type": "any"
+            },
+            {
+              "name": "name"
+            },
+            {
+              "name": "respond_id"
+            },
+            {
+              "name": "pharmacist_username "
+            },
+            {
+              "name": "user_id"
+            },
+            {
+              "name": "greeting_message"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2000,
+        16
+      ],
+      "id": "9efe1cac-cfdc-4a24-95a8-e6ae4f801fa2",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        16
+      ],
+      "id": "47b8d90b-59f2-4ac1-849c-c9dda3584840",
+      "name": "Wait 3 min",
+      "webhookId": "3cc91c2e-89cc-4386-a2db-4dbc97abb69b"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1760,
+        16
+      ],
+      "id": "0e418d64-19b5-47e8-b92f-24e3fe99dbbd",
+      "name": "Wait",
+      "webhookId": "bbf0625f-ae4e-4812-a0b9-e0079f9bc12e"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_consultations",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.user_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "assigned_pharmacist",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json['pharmacist_username '] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        16
+      ],
+      "id": "cb377c4b-43e1-4988-82d2-b8c8121191f7",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ULGf9fpSRKbElDxm",
+          "name": "CLOUD SUPABASE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from the Find a Contact node (the actual node name!)\nconst contactResponse = $('Find a Contact').item.json;\n\n// Handle if the response is an array or direct object\nconst contactData = Array.isArray(contactResponse) ? contactResponse[0] : contactResponse;\nconst assignee = contactData.assignee;\n\n// Get data from workflow trigger\nconst userId = $('When Executed by Another Workflow').item.json.user_id;\nconst executionId = $execution.id;\nconst phoneNumber = $('When Executed by Another Workflow').item.json.phone_number;\n\n// Build the base comment\nlet comment = `تنبيه:\nستصل رسالة تلقائية من وندورا بعد دقيقتين.\nيُرجى عدم الرد على العميل الآن.\n\nEXECUTION ID : ${executionId}\nFlow ID: LlyjtQ07gD53NX9h \nUser ID: ${userId}\n\n`;\n\n// Add mention ONLY if assignee exists and is not null\nif (assignee && assignee.id) {\n  comment += `{{@user.${assignee.id}}}\\n\\n`;\n}\n\nreturn [{\n  json: {\n    comment: comment,\n    executionId: executionId,\n    phoneNumber: phoneNumber,\n    userId: userId,\n    hasAssignee: assignee && assignee.id ? true : false,\n    assigneeId: assignee && assignee.id ? assignee.id : null,\n    assigneeEmail: assignee && assignee.email ? assignee.email : null,\n    assigneeName: assignee && assignee.firstName ? `${assignee.firstName} ${assignee.lastName || ''}`.trim() : null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        16
+      ],
+      "id": "0d70c36a-4da2-45b2-b57a-69c806cd21f2",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "CONTACTS",
+        "operation": "FIND_CONTACT",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        16
+      ],
+      "id": "bca87070-edcc-47a9-9f19-2184f660cf19",
+      "name": "Find a Contact",
+      "credentials": {
+        "respondIoApi": {
+          "id": "X29ShBiMoIBxXhXA",
+          "name": "Respond.io account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        16
+      ],
+      "id": "24c2b4fe-6cbc-4828-854a-3930947df839",
+      "name": "Wait1",
+      "webhookId": "0f92c617-f791-4360-8c93-7195a57433cb"
+    },
+    {
+      "parameters": {
+        "resource": "CONVERSATIONS",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "assignmentType": "userId",
+        "assigneeUserId": "={{ $('When Executed by Another Workflow').item.json.respond_id }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        16
+      ],
+      "id": "3496ba53-6f77-4067-8c8f-7b267febe26e",
+      "name": "Assign or unassign a Conversation1",
+      "credentials": {
+        "respondIoApi": {
+          "id": "X29ShBiMoIBxXhXA",
+          "name": "Respond.io account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "COMMENTS",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "comment": "={{ $json.comment }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        16
+      ],
+      "id": "d88a9156-3913-4b5d-8145-79cb16f58ff3",
+      "name": "INCOMING MESSAGE!1",
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "user_consultations",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.user_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        0
+      ],
+      "id": "2b378d97-fb8b-4ec8-8c6b-7f5432daa4f7",
+      "name": "Get a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ULGf9fpSRKbElDxm",
+          "name": "CLOUD SUPABASE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "consultation_images",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.user_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3632,
+        0
+      ],
+      "id": "31b8d826-b3bf-4f07-b7b7-a4b2ea99f61b",
+      "name": "Get a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ULGf9fpSRKbElDxm",
+          "name": "CLOUD SUPABASE"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "COMMENTS",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "comment": "=Skin type: {{ $('Get a row').item.json.skin_type }}\n\nSkin sensitivity : {{ $('Get a row').item.json.skin_sensitivity }}\n\nRelationship_status : {{ $('Get a row').item.json.relationship_status }}\n\nBudget: {{ $json.budget }}\n\n\n"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        0
+      ],
+      "id": "5e77300f-93a8-43c0-9a03-eba53b0c0475",
+      "name": "Add Customer Info",
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "COMMENTS",
+        "contactId": "={{ $('When Executed by Another Workflow').item.json.contact_id }}",
+        "comment": "=https://qqjchjafauetffnfdyku.supabase.co/storage/v1{{ $json.signedURL }}"
+      },
+      "type": "@respond-io/n8n-nodes-respond-io.respondio",
+      "typeVersion": 1,
+      "position": [
+        4208,
+        0
+      ],
+      "id": "19d82da8-b326-4ed6-827b-5c08811632af",
+      "name": "Add Customer Image",
+      "credentials": {
+        "respondIoApi": {
+          "id": "yKofs5cXaVkLz37b",
+          "name": "Respond.io account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://qqjchjafauetffnfdyku.supabase.co/storage/v1/object/sign/consultation-images/{{ $json.image_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"expiresIn\": 7200 }\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3920,
+        0
+      ],
+      "id": "9f16476d-39c6-49fb-887d-dc0f62bd0413",
+      "name": "Generate URL link valid for 5 min2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ULGf9fpSRKbElDxm",
+          "name": "CLOUD SUPABASE"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Build Routine Summary2": {
+      "main": [
+        [
+          {
+            "node": "Add Routine Summary As A Comment2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send short Diagnosis Message2": {
+      "main": [
+        [
+          {
+            "node": "Wait 15 seconds2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Message a model2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send greeting Message": {
+      "main": [
+        [
+          {
+            "node": "Wait 2.5min2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2.5min2": {
+      "main": [
+        [
+          {
+            "node": "Send short Diagnosis Message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 sec2": {
+      "main": [
+        [
+          {
+            "node": "Send followup2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send followup2": {
+      "main": [
+        [
+          {
+            "node": "Build Routine Summary2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 15 seconds2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Send morning routine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 sec3": {
+      "main": [
+        [
+          {
+            "node": "Send evening routine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send morning routine": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 sec3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send evening routine": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 sec2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 min": {
+      "main": [
+        [
+          {
+            "node": "Send greeting Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Find a Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "INCOMING MESSAGE!1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find a Contact": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Assign or unassign a Conversation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign or unassign a Conversation1": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INCOMING MESSAGE!1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row": {
+      "main": [
+        [
+          {
+            "node": "Add Customer Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row1": {
+      "main": [
+        [
+          {
+            "node": "Generate URL link valid for 5 min2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Customer Info": {
+      "main": [
+        [
+          {
+            "node": "Get a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Routine Summary As A Comment2": {
+      "main": [
+        [
+          {
+            "node": "Get a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate URL link valid for 5 min2": {
+      "main": [
+        [
+          {
+            "node": "Add Customer Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "7be41258-836c-457f-a7bf-4727c2b7e71b",
+  "activeVersionId": null,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-12-18T16:09:17.389Z",
+      "createdAt": "2025-12-18T16:09:17.389Z",
+      "role": "workflow:owner",
+      "workflowId": "vzu0SKHjR4GZbOBX",
+      "projectId": "GVBCAR6zsSYwPkOP"
+    }
+  ],
+  "activeVersion": null,
+  "tags": [
+    {
+      "updatedAt": "2025-12-18T16:10:43.486Z",
+      "createdAt": "2025-12-18T16:10:43.486Z",
+      "id": "E1r6hDiQktbizQpU",
+      "name": "DEV"
+    }
+  ]
+}
