@@ -28,8 +28,8 @@
       "name": "Create a row",
       "credentials": {
         "supabaseApi": {
-          "id": "8sR74F6s5tCQXadM",
-          "name": "Supabase account"
+          "id": "L8DXPf1Vpl4idzyu",
+          "name": "ai supply"
         }
       }
     },
@@ -60,8 +60,8 @@
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
-          "id": "Pk4rP5jLghRFLuSV",
-          "name": "Google Gemini(PaLM) Api account abd"
+          "id": "nY7SQVIxNzod6qgV",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -80,7 +80,6 @@
     },
     {
       "parameters": {
-        "authentication": "serviceAccount",
         "operation": "addLabels"
       },
       "type": "n8n-nodes-base.gmail",
@@ -93,9 +92,9 @@
       "name": "Add label to message",
       "webhookId": "4250d592-1df0-4941-8853-54440f2b35b9",
       "credentials": {
-        "googleApi": {
-          "id": "bUbPC70tJij034KN",
-          "name": "Google Service Account account"
+        "gmailOAuth2": {
+          "id": "FIjqSdNtGqLG2rYL",
+          "name": "Gmail account 2"
         }
       }
     }
@@ -163,7 +162,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "ade737c4-4186-40cf-8d50-b8b6bc5c1828",
+  "versionId": "d58dbcce-7dda-47ab-ba1a-0669c1963e7b",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "82a07e25bb5446408550f6d7aab9c641753a0ccd2476c2dc971589d3e32f8cc3"
