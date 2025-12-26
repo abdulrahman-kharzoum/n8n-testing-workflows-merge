@@ -3,6 +3,7 @@
   "nodes": [
     {
       "parameters": {
+        "httpMethod": "POST",
         "path": "f58b8f82-0566-4965-a570-6e42cb177268",
         "options": {}
       },
@@ -14,7 +15,7 @@
       ],
       "id": "1e5bf70d-4f43-4283-bfe6-ba061600eba5",
       "name": "Webhook",
-      "webhookId": "f58b8f82-0566-4965-a570-6e42cb177268"
+      "webhookId": "f58b8f82-0566-4965-a570-6e42cb17726"
     },
     {
       "parameters": {},
@@ -162,7 +163,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "d58dbcce-7dda-47ab-ba1a-0669c1963e7b",
+  "versionId": "81e11d9a-bce2-4f16-8dbd-3e62f1d79556",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "82a07e25bb5446408550f6d7aab9c641753a0ccd2476c2dc971589d3e32f8cc3"
