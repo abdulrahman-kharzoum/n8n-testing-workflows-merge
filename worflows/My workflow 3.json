@@ -3,6 +3,7 @@
   "nodes": [
     {
       "parameters": {
+        "httpMethod": "POST",
         "path": "f58b8f82-0566-4965-a570-6e42cb177268",
         "options": {}
       },
@@ -14,7 +15,7 @@
       ],
       "id": "1e5bf70d-4f43-4283-bfe6-ba061600eba5",
       "name": "Webhook",
-      "webhookId": "f58b8f82-0566-4965-a570-6e42cb177268"
+      "webhookId": "f58b8f82-0566-4965-a570-6e42cb17726"
     },
     {
       "parameters": {},
@@ -60,8 +61,8 @@
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
-          "id": "Pk4rP5jLghRFLuSV",
-          "name": "Google Gemini(PaLM) Api account abd"
+          "id": "nY7SQVIxNzod6qgV",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -80,7 +81,6 @@
     },
     {
       "parameters": {
-        "authentication": "serviceAccount",
         "operation": "addLabels"
       },
       "type": "n8n-nodes-base.gmail",
@@ -93,6 +93,10 @@
       "name": "Add label to message",
       "webhookId": "4250d592-1df0-4941-8853-54440f2b35b9",
       "credentials": {
+        "gmailOAuth2": {
+          "id": "FIjqSdNtGqLG2rYL",
+          "name": "Gmail account 2"
+        },
         "googleApi": {
           "id": "bUbPC70tJij034KN",
           "name": "Google Service Account account"
@@ -163,7 +167,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "ade737c4-4186-40cf-8d50-b8b6bc5c1828",
+  "versionId": "81e11d9a-bce2-4f16-8dbd-3e62f1d79556",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "82a07e25bb5446408550f6d7aab9c641753a0ccd2476c2dc971589d3e32f8cc3"
